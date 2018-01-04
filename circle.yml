@@ -22,6 +22,7 @@ deployment:
       tag: /.*/
       commands:
         - git config user.name "circleci"
+        - git config user.email "circleci@vgs.com"
         - git fetch
         - git checkout $RELEASE_BRANCH
         - git pull origin $RELEASE_BRANCH
