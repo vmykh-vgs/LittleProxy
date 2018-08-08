@@ -104,22 +104,26 @@ workflows:
   build_test_and_deploy:
     jobs:
       - build:
+          context: circleci
           filters:
             tags:
               only: /.*/
       - test:
+          context: circleci
           requires:
             - build
           filters:
             tags:
               only: /.*/
       - deployment:
+          context: circleci
           requires:
             - test
           filters:
             branches:
               only: vgs-edition
       - release:
+          context: circleci
           requires:
             - test
           filters:
