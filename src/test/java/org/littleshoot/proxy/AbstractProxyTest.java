@@ -402,6 +402,7 @@ public abstract class AbstractProxyTest {
 
                     @Override
                     public void clientDisconnected(
+                            FlowContext flowContext,
                             InetSocketAddress clientAddress,
                             SSLSession sslSession) {
                         clientDisconnects.incrementAndGet();

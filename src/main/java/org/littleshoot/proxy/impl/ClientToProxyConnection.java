@@ -1424,11 +1424,12 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
     private void recordClientDisconnected() {
         try {
+            FlowContext flowContext = flowContext();
             InetSocketAddress clientAddress = getClientAddress();
             for (ActivityTracker tracker : proxyServer
                     .getActivityTrackers()) {
                 tracker.clientDisconnected(
-                        clientAddress, clientSslSession);
+                    flowContext, clientAddress, clientSslSession);
             }
         } catch (Exception e) {
             LOG.error("Unable to recordClientDisconnected", e);

@@ -33,7 +33,7 @@ public class ThrottlingTest {
     // throttling is not guaranteed to be exact, so allow some variation in the amount of time the call takes. since we want
     // these tests to take just a few seconds, allow significant variation. even with this large variation, if throttling
     // is broken it should take much less time than expected.
-    private static final double ALLOWABLE_VARIATION = 0.30;
+    private static final double ALLOWABLE_VARIATION = 0.40;
 
     private Server writeWebServer;
     private Server readWebServer;

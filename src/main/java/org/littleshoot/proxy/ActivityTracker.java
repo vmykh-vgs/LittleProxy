@@ -36,11 +36,14 @@ public interface ActivityTracker {
 
     /**
      * Record that a client disconnected.
-     * 
+     *
+     * @param flowContext
+     *            if full information is available, this will be a
+     *            {@link FullFlowContext}.
      * @param clientAddress
      * @param sslSession
      */
-    void clientDisconnected(InetSocketAddress clientAddress,
+    void clientDisconnected(FlowContext flowContext, InetSocketAddress clientAddress,
             SSLSession sslSession);
 
     /**
