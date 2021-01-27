@@ -1,7 +1,6 @@
 package org.littleshoot.proxy;
 
 import org.littleshoot.proxy.impl.ThreadPoolConfiguration;
-import org.littleshoot.proxy.monitoring.ProxyThreadPoolsObserver;
 import org.littleshoot.proxy.ratelimit.RateLimiter;
 
 import java.net.InetSocketAddress;
@@ -413,14 +412,6 @@ public interface HttpProxyServerBootstrap {
      * @return proxy server bootstrap for chaining
      */
     HttpProxyServerBootstrap withThreadPoolConfiguration(ThreadPoolConfiguration configuration);
-
-    /**
-     * Set an observer instance to monitor internal thread pools.
-     *
-     * @param threadPoolObserver monitoring instance
-     * @return proxy server bootstrap for chaining
-     */
-    HttpProxyServerBootstrap withThreadPoolObserver(ProxyThreadPoolsObserver threadPoolObserver);
 
     /**
      * <p>

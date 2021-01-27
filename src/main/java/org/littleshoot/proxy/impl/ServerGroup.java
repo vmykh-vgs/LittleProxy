@@ -5,7 +5,6 @@ import io.netty.channel.udt.nio.NioUdtProvider;
 import org.littleshoot.proxy.HttpProxyServer;
 import org.littleshoot.proxy.TransportProtocol;
 import org.littleshoot.proxy.UnknownTransportProtocolException;
-import org.littleshoot.proxy.monitoring.ProxyThreadPoolsObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +49,6 @@ public class ServerGroup {
      * A name for this ServerGroup to use in naming threads.
      */
     private final String name;
-    private ProxyThreadPoolsObserver proxyThreadPoolsObserver;
 
     /**
      * The ID of this server group. Forms part of the name of each thread created for this server group. Useful for
@@ -105,16 +103,13 @@ public class ServerGroup {
      * @param incomingAcceptorThreads number of acceptor threads per protocol
      * @param incomingWorkerThreads number of client-to-proxy worker threads per protocol
      * @param outgoingWorkerThreads number of proxy-to-server worker threads per protocol
-     * @param proxyThreadPoolsObserver monitoring instance for thread pools
      */
-    public ServerGroup(String name, int incomingAcceptorThreads, int incomingWorkerThreads, int outgoingWorkerThreads,
-        ProxyThreadPoolsObserver proxyThreadPoolsObserver) {
+    public ServerGroup(String name, int incomingAcceptorThreads, int incomingWorkerThreads, int outgoingWorkerThreads) {
         this.name = name;
         this.serverGroupId = serverGroupCount.getAndIncrement();
         this.incomingAcceptorThreads = incomingAcceptorThreads;
         this.incomingWorkerThreads = incomingWorkerThreads;
         this.outgoingWorkerThreads = outgoingWorkerThreads;
-        this.proxyThreadPoolsObserver = proxyThreadPoolsObserver;
     }
 
     /**
@@ -152,7 +147,6 @@ public class ServerGroup {
                             outgoingWorkerThreads,
                             name,
                             serverGroupId);
-                    proxyThreadPoolsObserver.observe(protocol, threadPools);
                     protocolThreadPools.put(protocol, threadPools);
                 }
             }

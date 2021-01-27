@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 
-import io.netty.util.concurrent.EventExecutor;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.List;
 

@@ -19,8 +19,6 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.GlobalStateHandler;
 import org.littleshoot.proxy.DefaultFailureHttpResponseComposer;
-import org.littleshoot.proxy.monitoring.NoOpProxyThreadPoolsObserver;
-import org.littleshoot.proxy.monitoring.ProxyThreadPoolsObserver;
 import org.littleshoot.proxy.ratelimit.NoOpRateLimiter;
 import org.littleshoot.proxy.ratelimit.RateLimiter;
 import org.littleshoot.proxy.ChainedProxyManager;
@@ -691,7 +689,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private int maxChunkSize = MAX_CHUNK_SIZE_DEFAULT;
         private boolean allowRequestToOriginServer = false;
         private RateLimiter rateLimiter = new NoOpRateLimiter();
-        private ProxyThreadPoolsObserver threadPoolObserver = new NoOpProxyThreadPoolsObserver();
 
         private DefaultHttpProxyServerBootstrap() {
         }
@@ -1001,12 +998,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         }
 
         @Override
-        public HttpProxyServerBootstrap withThreadPoolObserver(ProxyThreadPoolsObserver threadPoolObserver) {
-            this.threadPoolObserver = threadPoolObserver;
-            return this;
-        }
-
-        @Override
         public HttpProxyServerBootstrap withRateLimiter(RateLimiter rateLimiter) {
             this.rateLimiter = rateLimiter;
             return this;
@@ -1019,12 +1010,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 serverGroup = this.serverGroup;
             }
             else {
-                serverGroup = new ServerGroup(name,
-                    clientToProxyAcceptorThreads,
-                    clientToProxyWorkerThreads,
-                    proxyToServerWorkerThreads,
-                    threadPoolObserver
-                );
+                serverGroup = new ServerGroup(name, clientToProxyAcceptorThreads, clientToProxyWorkerThreads, proxyToServerWorkerThreads);
             }
 
             return new DefaultHttpProxyServer(serverGroup,
