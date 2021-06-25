@@ -133,13 +133,15 @@ jobs:
             unset AWS_SECRET_ACCESS_KEY
             git config user.name "circleci"
             git config user.email "circleci@vgs.com"
-            git fetch
-            git checkout $RELEASE_BRANCH
-            git pull origin $RELEASE_BRANCH
-            git reset --hard
-            git tag -d $CIRCLE_TAG
-            mvn -B -X -e gitflow:release-start -DreleaseVersion=$CIRCLE_TAG
-            mvn -B -X -e gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG -DpostReleaseGoals='deploy -DskipTests'
+            mvn -B -e versions:set -DnewVersion=$CIRCLE_TAG
+            mvn deploy -DskipTests
+#            git fetch
+#            git checkout $RELEASE_BRANCH
+#            git pull origin $RELEASE_BRANCH
+#            git reset --hard
+#            git tag -d $CIRCLE_TAG
+#            mvn -B -X -e gitflow:release-start -DreleaseVersion=$CIRCLE_TAG
+#            mvn -B -X -e gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG -DpostReleaseGoals='deploy -DskipTests'
 #            git push origin $RELEASE_BRANCH
 
 # === WORKFLOW ===
