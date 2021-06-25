@@ -1,6 +1,6 @@
 package org.littleshoot.proxy.impl;
 
-public class TraceUtils {
+public final class TraceUtils {
 
   public static final String HEADER_VGS_CUSTOMER_B3_TRACEID = "VGS-Customer-B3-TraceId";
   public static final String HEADER_VGS_CUSTOMER_B3_SPANID = "VGS-Customer-B3-SpanId";
