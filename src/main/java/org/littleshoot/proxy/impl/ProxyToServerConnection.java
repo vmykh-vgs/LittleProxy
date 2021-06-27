@@ -909,7 +909,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         pipeline.addLast("bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast("bytesWrittenMonitor", bytesWrittenMonitor);
 
-        pipeline.addLast("encoder", new TraceableProxyHttpRequestEncoder());
+        pipeline.addLast("encoder", new TracingAwareHttpRequestEncoder());
         pipeline.addLast("decoder", new HeadAwareHttpResponseDecoder(
         		proxyServer.getMaxInitialLineLength(),
                 proxyServer.getMaxHeaderSize(),
