@@ -27,6 +27,7 @@ public class TracingAwareHttpRequestEncoder extends HttpRequestEncoder {
       headers.remove(TraceUtils.HEADER_X_B3_SPANID);
       headers.remove(TraceUtils.HEADER_X_B3_SAMPLED);
       headers.remove(TraceUtils.HEADER_X_B3_PARENTSPANID);
+      headers.remove(TraceUtils.HEADER_VGS_REQUEST_ID);
     }
   }
 
