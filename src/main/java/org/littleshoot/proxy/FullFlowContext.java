@@ -10,12 +10,16 @@ import org.littleshoot.proxy.impl.ProxyToServerConnection;
 public class FullFlowContext extends FlowContext {
     private final String serverHostAndPort;
     private final ChainedProxy chainedProxy;
+    private final ClientToProxyConnection clientConnection;
+    private final ProxyToServerConnection serverConnection;
 
     public FullFlowContext(ClientToProxyConnection clientConnection,
             ProxyToServerConnection serverConnection) {
         super(clientConnection);
         this.serverHostAndPort = serverConnection.getServerHostAndPort();
         this.chainedProxy = serverConnection.getChainedProxy();
+        this.clientConnection = clientConnection;
+        this.serverConnection = serverConnection;
     }
 
     /**
@@ -36,4 +40,11 @@ public class FullFlowContext extends FlowContext {
         return chainedProxy;
     }
 
+    public ClientToProxyConnection getClientConnection() {
+        return clientConnection;
+    }
+
+    public ProxyToServerConnection getServerConnection() {
+        return serverConnection;
+    }
 }

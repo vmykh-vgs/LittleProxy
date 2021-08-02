@@ -3,6 +3,7 @@ package org.littleshoot.proxy.impl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.compression.BrotliHttpContentCompressor;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -1449,6 +1450,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         } else {
             return new FlowContext(this);
         }
+    }
+
+    public ChannelHandlerContext getChannelHandlerContext() {
+        return ctx;
     }
 
 }
