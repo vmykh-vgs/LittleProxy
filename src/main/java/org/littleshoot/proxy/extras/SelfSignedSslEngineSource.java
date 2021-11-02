@@ -1,6 +1,7 @@
 package org.littleshoot.proxy.extras;
 
 import com.google.common.io.ByteStreams;
+import org.apache.commons.lang3.StringUtils;
 import org.littleshoot.proxy.SslEngineSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,9 +32,15 @@ public class SelfSignedSslEngineSource implements SslEngineSource {
     private static final Logger LOG = LoggerFactory
             .getLogger(SelfSignedSslEngineSource.class);
 
-    private static final String ALIAS = "littleproxy";
-    private static final String PASSWORD = "Be Your Own Lantern";
+    protected static final String ALIAS = "littleproxy";
+    protected static final String PASSWORD = "Be Your Own Lantern";
     private static final String PROTOCOL = "TLS";
+
+    protected static final String SSL_DIR_PATH_PROPERTY = "littleproxy.ssl.dir.path";
+    protected static final String KEY_STORE_NAME = "littleproxy_keystore.jks";
+
+    protected static final String KEY_STORE_CERT_NAME = "littleproxy_cert";
+
     private final File keyStoreFile;
     private final boolean trustAllServers;
     private final boolean sendCerts;
@@ -44,6 +51,9 @@ public class SelfSignedSslEngineSource implements SslEngineSource {
             boolean trustAllServers, boolean sendCerts) {
         this.trustAllServers = trustAllServers;
         this.sendCerts = sendCerts;
+        keyStorePath =  StringUtils.isNotBlank(System.getProperty(SSL_DIR_PATH_PROPERTY))
+            ? System.getProperty(SSL_DIR_PATH_PROPERTY) + keyStorePath
+            : keyStorePath;
         this.keyStoreFile = new File(keyStorePath);
         initializeKeyStore();
         initializeSSLContext();
@@ -58,7 +68,7 @@ public class SelfSignedSslEngineSource implements SslEngineSource {
     }
 
     public SelfSignedSslEngineSource(boolean trustAllServers, boolean sendCerts) {
-        this("littleproxy_keystore.jks", trustAllServers, sendCerts);
+        this(KEY_STORE_NAME, trustAllServers, sendCerts);
     }
 
     public SelfSignedSslEngineSource() {
@@ -88,14 +98,19 @@ public class SelfSignedSslEngineSource implements SslEngineSource {
         nativeCall("keytool", "-genkey", "-alias", ALIAS, "-keysize",
                 "4096", "-validity", "36500", "-keyalg", "RSA", "-dname",
                 "CN=littleproxy", "-keypass", PASSWORD, "-storepass",
-                PASSWORD, "-keystore", keyStoreFile.getName());
+                PASSWORD, "-keystore", keyStoreFile.getAbsolutePath());
+
+        final String keyStoreCertPath =
+            StringUtils.isNotBlank(System.getProperty(SSL_DIR_PATH_PROPERTY))
+                ? System.getProperty(SSL_DIR_PATH_PROPERTY) + KEY_STORE_CERT_NAME
+                : KEY_STORE_CERT_NAME;
 
         nativeCall("keytool", "-exportcert", "-alias", ALIAS, "-keystore",
-                keyStoreFile.getName(), "-storepass", PASSWORD, "-file",
-                "littleproxy_cert");
+                keyStoreFile.getAbsolutePath(), "-storepass", PASSWORD, "-file",
+                keyStoreCertPath);
     }
 
-    private void initializeSSLContext() {
+    protected void initializeSSLContext() {
         String algorithm = Security
                 .getProperty("ssl.KeyManagerFactory.algorithm");
         if (algorithm == null) {
@@ -159,7 +174,7 @@ public class SelfSignedSslEngineSource implements SslEngineSource {
         }
     }
 
-    private String nativeCall(final String... commands) {
+    protected String nativeCall(final String... commands) {
         LOG.info("Running '{}'", Arrays.asList(commands));
         final ProcessBuilder pb = new ProcessBuilder(commands);
         try {
