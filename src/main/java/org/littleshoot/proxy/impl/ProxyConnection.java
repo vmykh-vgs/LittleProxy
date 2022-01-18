@@ -11,6 +11,8 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
+import java.util.HashMap;
+import java.util.Map;
 import org.littleshoot.proxy.HttpFilters;
 
 import javax.net.ssl.SSLEngine;
@@ -80,6 +82,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * If using encryption, this holds our {@link SSLEngine}.
      */
     protected volatile SSLEngine sslEngine;
+    protected Map<Future, GenericFutureListener> listeners = new HashMap();
 
     /**
      * Construct a new ProxyConnection.
@@ -465,34 +468,39 @@ abstract class ProxyConnection<I extends HttpObject> extends
             return null;
         } else {
             final Promise<Void> promise = channel.newPromise();
-            writeToChannel(Unpooled.EMPTY_BUFFER).addListener(
-                    new GenericFutureListener<Future<? super Void>>() {
-                        @Override
-                        public void operationComplete(
-                                Future<? super Void> future)
-                                throws Exception {
-                            closeChannel(promise);
-                        }
-                    });
+            ChannelFuture channelFuture = writeToChannel(Unpooled.EMPTY_BUFFER);
+            GenericFutureListener<Future<? super Void>> genericFutureListener = new GenericFutureListener<Future<? super Void>>() {
+                @Override
+                public void operationComplete(
+                    Future<? super Void> future)
+                    throws Exception {
+                    closeChannel(promise);
+                }
+            };
+            channelFuture.addListener(genericFutureListener);
+            listeners.put(channelFuture, genericFutureListener);
             return promise;
         }
     }
 
     private void closeChannel(final Promise<Void> promise) {
-        channel.close().addListener(
-                new GenericFutureListener<Future<? super Void>>() {
-                    public void operationComplete(
-                            Future<? super Void> future)
-                            throws Exception {
-                        if (future
-                                .isSuccess()) {
-                            promise.setSuccess(null);
-                        } else {
-                            promise.setFailure(future
-                                    .cause());
-                        }
-                    };
-                });
+        ChannelFuture channelFuture = channel.close();
+        GenericFutureListener<Future<? super Void>> futureListener = new GenericFutureListener<Future<? super Void>>() {
+            public void operationComplete(
+                Future<? super Void> future)
+                throws Exception {
+                if (future
+                    .isSuccess()) {
+                    promise.setSuccess(null);
+                } else {
+                    promise.setFailure(future
+                        .cause());
+                }
+            };
+        };
+        channelFuture.addListener(
+            futureListener);
+        listeners.put(channelFuture, futureListener);
     }
 
     /**
@@ -623,6 +631,17 @@ abstract class ProxyConnection<I extends HttpObject> extends
             disconnected();
         } finally {
             super.channelInactive(ctx);
+            try {
+                removeListeners();
+            } catch (Exception e) {
+                LOG.warn("Listeners removing error", e);
+            }
+        }
+    }
+
+    private void removeListeners() {
+        for (Future channelFuture : listeners.keySet()) {
+            channelFuture.removeListener(listeners.get(channelFuture));
         }
     }
 

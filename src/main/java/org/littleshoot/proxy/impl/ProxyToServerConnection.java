@@ -33,6 +33,8 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import java.util.HashMap;
+import java.util.Map;
 import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.ChainedProxy;
 import org.littleshoot.proxy.ChainedProxyAdapter;
@@ -685,7 +687,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
             if(isMitmEnabled){
                 ChannelFuture future = writeToChannel(initialRequest);
-                future.addListener(new ChannelFutureListener() {
+                ChannelFutureListener listener = new ChannelFutureListener() {
 
                     @Override
                     public void operationComplete(ChannelFuture arg0) throws Exception {
@@ -693,7 +695,9 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                             writeToChannel(LastHttpContent.EMPTY_LAST_CONTENT);
                         }
                     }
-                });
+                };
+                future.addListener(listener);
+                listeners.put(future, listener);
             	return future;
             } else {
                 return writeToChannel(initialRequest);

@@ -153,21 +153,24 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
         if (sslEngineSource != null) {
             LOG.debug("Enabling encryption of traffic from client to proxy");
-            encrypt(pipeline, sslEngineSource.newSslEngine(),
-                    authenticateClients)
-                    .addListener(
-                            new GenericFutureListener<Future<? super Channel>>() {
-                                @Override
-                                public void operationComplete(
-                                        Future<? super Channel> future)
-                                        throws Exception {
-                                    if (future.isSuccess()) {
-                                        clientSslSession = sslEngine
-                                                .getSession();
-                                        recordClientSSLHandshakeSucceeded();
-                                    }
-                                }
-                            });
+            GenericFutureListener<Future<Channel>> futureListener = new GenericFutureListener<Future<Channel>>() {
+                @Override
+                public void operationComplete(
+                    Future<Channel> future)
+                    throws Exception {
+                    if (future.isSuccess()) {
+                        clientSslSession = sslEngine
+                            .getSession();
+                        recordClientSSLHandshakeSucceeded();
+                    }
+                }
+            };
+            Future<Channel> future = encrypt(pipeline, sslEngineSource.newSslEngine(),
+                authenticateClients)
+                .addListener(
+                    futureListener);
+            future.addListener(futureListener);
+            listeners.put(future, futureListener);
         }
         this.globalTrafficShapingHandler = globalTrafficShapingHandler;
 

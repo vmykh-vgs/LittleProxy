@@ -16,6 +16,8 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import java.util.HashMap;
+import java.util.Map;
 import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.GlobalStateHandler;
 import org.littleshoot.proxy.DefaultFailureHttpResponseComposer;
@@ -164,6 +166,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             abort();
         }
     }, "LittleProxy-JVM-shutdown-hook");
+
+    private Map<ChannelFuture, ChannelFutureListener> listeners = new HashMap();
 
     /**
      * Bootstrap a new {@link DefaultHttpProxyServer} starting from scratch.
@@ -474,6 +478,11 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 LOG.info("Shutting down proxy server immediately (non-graceful)");
             }
 
+            try {
+                removeListeners();
+            } catch (Exception e) {
+                LOG.warn("Listeners removing error", e);
+            }
             closeAllChannels(graceful);
 
             serverGroup.unregisterProxyServer(this, graceful);
@@ -486,6 +495,12 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             }
 
             LOG.info("Done shutting down proxy server");
+        }
+    }
+
+    private void removeListeners() {
+        for (ChannelFuture channelFuture : listeners.keySet()) {
+            channelFuture.removeListener(listeners.get(channelFuture));
         }
     }
 
@@ -577,16 +592,18 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 throw new UnknownTransportProtocolException(transportProtocol);
         }
         serverBootstrap.childHandler(initializer);
+        ChannelFutureListener listener = new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future)
+                throws Exception {
+                if (future.isSuccess()) {
+                    registerChannel(future.channel());
+                }
+            }
+        };
         ChannelFuture future = serverBootstrap.bind(requestedAddress)
-                .addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future)
-                            throws Exception {
-                        if (future.isSuccess()) {
-                            registerChannel(future.channel());
-                        }
-                    }
-                }).awaitUninterruptibly();
+                .addListener(listener).awaitUninterruptibly();
+        listeners.put(future, listener);
 
         Throwable cause = future.cause();
         if (cause != null) {

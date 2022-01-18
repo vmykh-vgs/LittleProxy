@@ -1,9 +1,12 @@
 package org.littleshoot.proxy.impl;
 
+import io.netty.channel.Channel;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -20,7 +23,8 @@ class ConnectionFlow {
     private volatile ConnectionFlowStep currentStep;
     private volatile boolean suppressInitialRequest = false;
     private final Object connectLock;
-    
+    private final Map<Future<Channel>, GenericFutureListener<Future<?>>> listeners = new HashMap();
+
     /**
      * Construct a new {@link ConnectionFlow} for the given client and server
      * connections.
@@ -138,24 +142,29 @@ class ConnectionFlow {
      */
     @SuppressWarnings("unchecked")
     private void doProcessCurrentStep(final ProxyConnectionLogger LOG) {
-        currentStep.execute().addListener(
-                new GenericFutureListener<Future<?>>() {
-                    public void operationComplete(
-                            io.netty.util.concurrent.Future<?> future)
-                            throws Exception {
-                        synchronized (connectLock) {
-                            if (future.isSuccess()) {
-                                LOG.debug("ConnectionFlowStep succeeded");
-                                currentStep
-                                        .onSuccess(ConnectionFlow.this);
-                            } else {
-                                LOG.debug("ConnectionFlowStep failed",
-                                        future.cause());
-                                fail(future.cause());
-                            }
-                        }
-                    };
-                });
+        GenericFutureListener<Future<?>> futureListener = new GenericFutureListener<Future<?>>() {
+            public void operationComplete(
+                Future<?> future)
+                throws Exception {
+                synchronized (connectLock) {
+                    if (future.isSuccess()) {
+                        LOG.debug("ConnectionFlowStep succeeded");
+                        currentStep
+                            .onSuccess(ConnectionFlow.this);
+                    } else {
+                        LOG.debug("ConnectionFlowStep failed",
+                            future.cause());
+                        fail(future.cause());
+                    }
+                }
+            }
+
+            ;
+        };
+        Future stepFuture = currentStep.execute();
+        stepFuture.addListener(
+            futureListener);
+        listeners.put(stepFuture, futureListener);
     }
 
     /**
@@ -176,6 +185,7 @@ class ConnectionFlow {
                 if (serverConnection.getInitialRequest() instanceof ReferenceCounted) {
                     ((ReferenceCounted)serverConnection.getInitialRequest()).release();
                 }
+                removeListeners();
             }
         }
     }
@@ -189,45 +199,55 @@ class ConnectionFlow {
     void fail(final Throwable cause) {
         final ConnectionState lastStateBeforeFailure = serverConnection
                 .getCurrentState();
-        serverConnection.disconnect().addListener(
-                new GenericFutureListener() {
-                    @Override
-                    public void operationComplete(Future future)
-                            throws Exception {
-                        synchronized (connectLock) {
+        Future disconnectFuture = serverConnection.disconnect();
+        GenericFutureListener listener = new GenericFutureListener() {
+            @Override
+            public void operationComplete(Future future)
+                throws Exception {
+                synchronized (connectLock) {
 
-                            boolean fallbackToAnotherChainedProxy = false;
+                    boolean fallbackToAnotherChainedProxy = false;
 
-                            try {
-                                fallbackToAnotherChainedProxy = clientConnection.serverConnectionFailed(
-                                    serverConnection,
-                                    lastStateBeforeFailure,
-                                    cause);
-                            } finally {
-                                // Do not release when there is fallback chained proxy
-                                if (!fallbackToAnotherChainedProxy) {
-                                    if (serverConnection.getInitialRequest() instanceof ReferenceCounted) {
-                                        ((ReferenceCounted)serverConnection.getInitialRequest()).release();
-                                    }
-
-                                    // the connection to the server failed and we are not retrying, so transition to the
-                                    // DISCONNECTED state
-                                    serverConnection.become(ConnectionState.DISCONNECTED);
-
-                                    // We are not retrying our connection, let anyone waiting for a connection know that we're done
-                                    notifyThreadsWaitingForConnection();
-                                }
+                    try {
+                        fallbackToAnotherChainedProxy = clientConnection.serverConnectionFailed(
+                            serverConnection,
+                            lastStateBeforeFailure,
+                            cause);
+                    } finally {
+                        // Do not release when there is fallback chained proxy
+                        if (!fallbackToAnotherChainedProxy) {
+                            if (serverConnection.getInitialRequest() instanceof ReferenceCounted) {
+                                ((ReferenceCounted) serverConnection.getInitialRequest()).release();
                             }
+
+                            // the connection to the server failed and we are not retrying, so transition to the
+                            // DISCONNECTED state
+                            serverConnection.become(ConnectionState.DISCONNECTED);
+
+                            // We are not retrying our connection, let anyone waiting for a connection know that we're done
+                            notifyThreadsWaitingForConnection();
                         }
                     }
-                });
+                }
+            }
+        };
+        disconnectFuture.addListener(
+            listener);
+        listeners.put(disconnectFuture, listener);
     }
 
     /**
      * Like {@link #fail(Throwable)} but with no cause.
      */
     void fail() {
+        removeListeners();
         fail(null);
+    }
+
+    private void removeListeners() {
+        for (Future future : listeners.keySet()) {
+            future.removeListener(listeners.get(future));
+        }
     }
 
     /**
