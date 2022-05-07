@@ -794,14 +794,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     private void initChannelPipeline(ChannelPipeline pipeline) {
         LOG.debug("Configuring ChannelPipeline");
 
-        if (proxyServer.getRequestTracer() != null) {
-            pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
-        }
-
-        if (proxyServer.getGlobalStateHandler() != null) {
-            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));
-        }
-
         pipeline.addLast("bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast("bytesWrittenMonitor", bytesWrittenMonitor);
 
@@ -822,6 +814,16 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 .getMaximumRequestBufferSizeInBytes();
         if (numberOfBytesToBuffer > 0) {
             aggregateContentForFiltering(pipeline, numberOfBytesToBuffer);
+        }
+
+        pipeline.addLast("httpPipeliningBlocker", new HttpPipeliningBlocker());
+
+        if (proxyServer.getRequestTracer() != null) {
+            pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
+        }
+
+        if (proxyServer.getGlobalStateHandler() != null) {
+            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));
         }
 
         pipeline.addLast("requestReadMonitor", requestReadMonitor);
