@@ -133,6 +133,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final int maxChunkSize;
     private final boolean allowRequestsToOriginServer;
     private final RateLimiter rateLimiter;
+    private final boolean httpPipeliningBlocked;
 
     /**
      * The alias or pseudonym for this proxy, used when adding the Via header.
@@ -274,7 +275,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             int maxHeaderSize,
             int maxChunkSize,
             boolean allowRequestsToOriginServer,
-            RateLimiter rateLimiter) {
+            RateLimiter rateLimiter,
+            boolean httpPipeliningBlocked) {
         this.serverGroup = serverGroup;
         this.transportProtocol = transportProtocol;
         this.requestedAddress = requestedAddress;
@@ -319,6 +321,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.maxChunkSize = maxChunkSize;
         this.allowRequestsToOriginServer = allowRequestsToOriginServer;
         this.rateLimiter = rateLimiter;
+        this.httpPipeliningBlocked = httpPipeliningBlocked;
     }
 
     /**
@@ -412,6 +415,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return rateLimiter;
     }
 
+    public boolean isHttpPipeliningBlocked() {
+        return httpPipeliningBlocked;
+    }
+
 	public boolean isAllowRequestsToOriginServer() {
         return allowRequestsToOriginServer;
     }
@@ -446,7 +453,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     maxHeaderSize,
                     maxChunkSize,
                     allowRequestsToOriginServer,
-                    rateLimiter);
+                    rateLimiter,
+                    httpPipeliningBlocked);
     }
 
     @Override
@@ -692,6 +700,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private boolean allowRequestToOriginServer = false;
         private RateLimiter rateLimiter = new NoOpRateLimiter();
         private ProxyThreadPoolsObserver threadPoolObserver = new NoOpProxyThreadPoolsObserver();
+        private boolean httpPipeliningBlocked = false;
 
         private DefaultHttpProxyServerBootstrap() {
         }
@@ -722,7 +731,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 int maxHeaderSize,
                 int maxChunkSize,
                 boolean allowRequestToOriginServer,
-                RateLimiter rateLimiter) {
+                RateLimiter rateLimiter,
+                boolean httpPipeliningBlocked) {
             this.serverGroup = serverGroup;
             this.transportProtocol = transportProtocol;
             this.requestedAddress = requestedAddress;
@@ -754,6 +764,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         	this.maxChunkSize = maxChunkSize;
         	this.allowRequestToOriginServer = allowRequestToOriginServer;
           this.rateLimiter = rateLimiter;
+          this.httpPipeliningBlocked = httpPipeliningBlocked;
         }
 
         private DefaultHttpProxyServerBootstrap(Properties props) {
@@ -1012,6 +1023,12 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             return this;
         }
 
+        @Override
+        public HttpProxyServerBootstrap withHttpPipeliningBlocked(boolean httpPipeliningBlocked) {
+            this.httpPipeliningBlocked = httpPipeliningBlocked;
+            return this;
+        }
+
         private DefaultHttpProxyServer build() {
             final ServerGroup serverGroup;
 
@@ -1036,7 +1053,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,
                     localAddress, proxyAlias, maxInitialLineLength, maxHeaderSize, maxChunkSize,
-                    allowRequestToOriginServer, rateLimiter);
+                    allowRequestToOriginServer, rateLimiter, httpPipeliningBlocked);
         }
 
         private InetSocketAddress determineListenAddress() {

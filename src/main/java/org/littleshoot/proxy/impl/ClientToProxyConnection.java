@@ -816,7 +816,9 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             aggregateContentForFiltering(pipeline, numberOfBytesToBuffer);
         }
 
-        pipeline.addLast("httpPipeliningBlocker", new HttpPipeliningBlocker());
+        if (proxyServer.isHttpPipeliningBlocked()) {
+            pipeline.addLast("httpPipeliningBlocker", new HttpPipeliningBlocker());
+        }
 
         if (proxyServer.getRequestTracer() != null) {
             pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));

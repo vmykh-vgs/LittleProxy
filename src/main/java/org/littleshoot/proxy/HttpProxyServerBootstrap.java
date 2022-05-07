@@ -434,4 +434,17 @@ public interface HttpProxyServerBootstrap {
      * @param rateLimiter
      */
     HttpProxyServerBootstrap withRateLimiter(RateLimiter rateLimiter);
+
+    /**
+     * <p>
+     * Specify whether to block http pipelining
+     * </p>
+     *
+     * <p>
+     * Default = false
+     * </p>
+     *
+     * @param blockHttpPipelining
+     */
+    HttpProxyServerBootstrap withHttpPipeliningBlocked(boolean blockHttpPipelining);
 }
